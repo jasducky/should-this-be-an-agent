@@ -451,31 +451,28 @@ export default function AssessmentPage() {
       nextSteps,
     });
 
-    // Send to Encharge webhook
-    const webhookUrl = process.env.NEXT_PUBLIC_ENCHARGE_WEBHOOK_URL;
-    if (webhookUrl) {
-      try {
-        await fetch(webhookUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            tier: tierResult.tier,
-            tierLabel: tierResult.label,
-            percentage,
-            scores: Object.fromEntries(
-              questions.map((q) => [
-                q.shortLabel,
-                answers[q.id],
-              ])
-            ),
-            source: "should-this-be-an-agent",
-            assessmentUrl: shareUrl,
-          }),
-        });
-      } catch {
-        // Webhook failure shouldn't block the user experience
-      }
+    // Send to server-side API route (which forwards to Encharge)
+    try {
+      await fetch("/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          tier: tierResult.tier,
+          tierLabel: tierResult.label,
+          percentage,
+          scores: Object.fromEntries(
+            questions.map((q) => [
+              q.shortLabel,
+              answers[q.id],
+            ])
+          ),
+          source: "should-this-be-an-agent",
+          assessmentUrl: shareUrl,
+        }),
+      });
+    } catch {
+      // Submission failure shouldn't block the user experience
     }
 
     setEmailSubmitted(true);

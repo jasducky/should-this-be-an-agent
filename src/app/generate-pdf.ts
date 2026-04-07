@@ -90,7 +90,8 @@ export function generateResultsPdf(data: PdfData): void {
 
     // Bar fill
     const fillWidth = (s.score / 5) * barMaxWidth;
-    const barColour = s.score >= 4 ? tier1 : s.score >= 3 ? serpinYellow : tier3;
+    const amber: RGB = [210, 160, 60];
+    const barColour = s.score >= 4 ? tier1 : s.score >= 3 ? amber : tier3;
     doc.setFillColor(...barColour);
     if (fillWidth > 0) {
       doc.roundedRect(barX, y, fillWidth, barHeight, 2, 2, "F");

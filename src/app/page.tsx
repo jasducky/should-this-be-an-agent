@@ -1,65 +1,1059 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
+import { generateResultsPdf } from "./generate-pdf";
+
+// ─── Question Data ───────────────────────────────────────────────
+
+interface Question {
+  id: number;
+  question: string;
+  shortLabel: string;
+  why: string;
+  thinkAbout: string;
+  options: string[];
+  weight: number;
+  scoring: "linear" | "bell" | "inverted";
+}
+
+const questions: Question[] = [
+  {
+    id: 1,
+    question: "How much human interpretation does this process need?",
+    shortLabel: "Interpretation needed",
+    why: "This is the code\u2013AI\u2013human spectrum. Code handles structured logic, humans handle complex judgement, and agents fill the middle, where inputs are unstructured but the decision logic is clear enough to follow rules.",
+    thinkAbout:
+      "Could you write a decision tree for every scenario? If yes, code can handle it and you don\u2019t need AI.",
+    options: [
+      "Purely rules-based, no ambiguity",
+      "Mostly rules, occasional edge cases",
+      "Mix of rules and interpretation",
+      "Significant interpretation required",
+      "Requires deep expertise and judgement",
+    ],
+    weight: 1.5,
+    scoring: "bell",
+  },
+  {
+    id: 2,
+    question: "How variable are the inputs?",
+    shortLabel: "Input variability",
+    why: "This is about edge case density: how many exceptions exist per standard case. AI earns its place when inputs can\u2019t be captured by fixed templates, dropdown menus, or structured forms.",
+    thinkAbout:
+      "If you built a form with dropdown menus, could it capture every possible input? If not, that\u2019s where AI adds value.",
+    options: [
+      "Always the same format",
+      "Mostly consistent, minor variations",
+      "Moderate variation",
+      "Highly variable",
+      "Wildly different each time",
+    ],
+    weight: 1.0,
+    scoring: "linear",
+  },
+  {
+    id: 3,
+    question: "What\u2019s the volume?",
+    shortLabel: "Volume",
+    why: "This is unit economics for AI. Every agent interaction has a per-use cost (inference, retrieval, retries, moderation), and the true cost per task is typically 10\u201350\u00d7 the posted API price. Low volume rarely pays back.",
+    thinkAbout:
+      "What would each interaction cost? Multiply by volume, then compare to the current human cost for the same work.",
+    options: [
+      "A few per week",
+      "A few per day",
+      "Dozens per day",
+      "Hundreds per day",
+      "Thousands or more per day",
+    ],
+    weight: 0.75,
+    scoring: "linear",
+  },
+  {
+    id: 4,
+    question: "What happens when it gets it wrong?",
+    shortLabel: "Consequence of errors",
+    why: "This is where you run a pre-mortem: \u2018Imagine this agent has been live for three months and something has gone wrong. What happened?\u2019 Understanding the consequences upfront helps you design the right level of guardrails and human oversight.",
+    thinkAbout:
+      "Run a quick pre-mortem: what\u2019s the most likely thing to go wrong? Who would notice, and how quickly?",
+    options: [
+      "Minor inconvenience, easily fixed",
+      "Some wasted time or rework",
+      "Customer-facing impact",
+      "Significant financial or reputational impact",
+      "Regulatory, legal, or safety consequences",
+    ],
+    weight: 1.5,
+    scoring: "inverted",
+  },
+  {
+    id: 5,
+    question: "How much of the process is already documented?",
+    shortLabel: "Process documentation",
+    why: "PMs call this the bus factor. If your expert left tomorrow, could someone else do their job from the docs? Undocumented processes are full of tribal knowledge that\u2019s hard to automate and harder to test.",
+    thinkAbout:
+      "Is there a process map, decision tree, or even a checklist? Or does it all live in someone\u2019s head?",
+    options: [
+      "Lives entirely in people\u2019s heads",
+      "Partially documented, lots of tribal knowledge",
+      "Core process documented, edge cases aren\u2019t",
+      "Well documented with some gaps",
+      "Fully mapped with decision trees",
+    ],
+    weight: 1.0,
+    scoring: "linear",
+  },
+  {
+    id: 6,
+    question: "Does the business case hold up at current AI costs?",
+    shortLabel: "Business case",
+    why: "This is your viability gate, not a full business case but a sanity check. If you haven\u2019t modelled cost-to-serve against the value created, you\u2019re investing based on excitement rather than evidence.",
+    thinkAbout:
+      "Can you estimate: cost per AI interaction \u00d7 expected volume vs. current human cost for the same work?",
+    options: [
+      "Haven\u2019t thought about it",
+      "Rough idea, not confident",
+      "Estimated, looks reasonable",
+      "Modelled with assumptions",
+      "Detailed analysis, clear ROI",
+    ],
+    weight: 1.0,
+    scoring: "linear",
+  },
+  {
+    id: 7,
+    question:
+      "Is there a human who currently does this and can validate the agent\u2019s work?",
+    shortLabel: "Human validator",
+    why: "In AI products, this is about ground truth: having someone who can verify whether the agent\u2019s output is correct. A human validator gives you a way to establish what \u2018right\u2019 looks like, catch issues early, and build confidence in the system over time.",
+    thinkAbout:
+      "Who would check the agent\u2019s work? Would they spot it if the agent got something subtly wrong?",
+    options: [
+      "No one does this today",
+      "Someone did, but they\u2019ve moved on",
+      "Yes, but they\u2019re too busy to review",
+      "Yes, they could spot-check regularly",
+      "Yes, they\u2019re ready and willing to validate",
+    ],
+    weight: 1.25,
+    scoring: "linear",
+  },
+  {
+    id: 8,
+    question:
+      "Does leadership understand this won\u2019t be right 100% of the time?",
+    shortLabel: "Leadership readiness",
+    why: "Teams that align on \u2018good enough\u2019 before building have a much higher success rate. Only 12% of agent projects make it to production, and the ones that do tend to have leadership who understood from the start that AI is probabilistic, not perfect.",
+    thinkAbout:
+      "Has anyone asked: \u2018What error rate would we accept?\u2019 If that conversation hasn\u2019t happened, start there before building anything.",
+    options: [
+      "No, they expect perfection",
+      "They say they understand but haven\u2019t been tested",
+      "Some understanding, haven\u2019t discussed specifics",
+      "Yes, we\u2019ve discussed acceptable error rates",
+      "Yes, we\u2019ve agreed on specific tolerances",
+    ],
+    weight: 1.25,
+    scoring: "linear",
+  },
+];
+
+// ─── Scoring Logic ───────────────────────────────────────────────
+
+const bellScoreMap: Record<number, number> = {
+  1: 2,
+  2: 4,
+  3: 5,
+  4: 5,
+  5: 3,
+};
+
+const invertedScoreMap: Record<number, number> = {
+  1: 5,
+  2: 4,
+  3: 3,
+  4: 2,
+  5: 1,
+};
+
+function getRawScore(value: number, scoring: Question["scoring"]): number {
+  if (scoring === "bell") return bellScoreMap[value];
+  if (scoring === "inverted") return invertedScoreMap[value];
+  return value;
+}
+
+function getWeightedScore(value: number, question: Question): number {
+  return getRawScore(value, question.scoring) * question.weight;
+}
+
+const maxWeightedScore = questions.reduce((sum, q) => sum + 5 * q.weight, 0);
+
+interface TierResult {
+  tier: 1 | 2 | 3;
+  label: string;
+  headline: string;
+  description: string;
+  nextSteps: string[];
+}
+
+function getTierNextSteps(percentage: number, hasWarnings: boolean): string[] {
+  if (percentage >= 70) {
+    const steps: string[] = [];
+    if (hasWarnings) {
+      steps.push("Review the areas flagged above and make sure each one has a plan before you move forward");
+    }
+    steps.push("Share this result with your team so everyone starts with the same understanding of what\u2019s involved");
+    steps.push("The next step is Question 2: understanding the real process behind this use case. Sign up below and we\u2019ll send it when it\u2019s ready");
+    return steps;
+  }
+  if (percentage >= 45) {
+    const steps: string[] = [];
+    if (hasWarnings) {
+      steps.push("Review the areas flagged above. These are the things worth addressing before investing in a build");
+      steps.push("Talk to your team about those areas, particularly around risk tolerance and validation");
+    } else {
+      steps.push("Your scores are solid across the board. Share this result with your team as a starting point for the conversation");
+    }
+    steps.push("The next step is Question 2: breaking the process down to see which parts suit AI and which don\u2019t. Sign up below and we\u2019ll send it when it\u2019s ready");
+    return steps;
+  }
+  const steps: string[] = [
+    "Look at workflow automation tools (like Zapier, Make, or n8n) for structured, rules-based processes",
+  ];
+  if (hasWarnings) {
+    steps.push("The areas flagged above are worth addressing regardless of the solution you choose");
+  }
+  steps.push("If you think parts of the process might still suit AI, try the assessment again with a narrower scope, focusing on one specific sub-task rather than the whole process");
+  return steps;
+}
+
+function getTierResult(percentage: number): TierResult {
+  if (percentage >= 70) {
+    return {
+      tier: 1,
+      label: "Agent-Shaped",
+      headline: "This looks like a strong candidate for an AI agent.",
+      description:
+        "Your use case has the right mix: enough interpretation to need AI, manageable risk, and an organisation that\u2019s ready for it. The business case and validation path are there.",
+      nextSteps: [],
+    };
+  }
+  if (percentage >= 45) {
+    return {
+      tier: 2,
+      label: "Hybrid",
+      headline: "Parts of this suit AI. Parts don\u2019t.",
+      description:
+        "Your use case has potential, but some factors need addressing first. The scores above show you which areas to focus on.",
+      nextSteps: [],
+    };
+  }
+  return {
+    tier: 3,
+    label: "Not an Agent",
+    headline: "This is better solved without an AI agent.",
+    description:
+      "That\u2019s not a bad thing. It means you can solve this problem faster and cheaper with other tools. Agents add cost and complexity that this use case doesn\u2019t need right now.",
+    nextSteps: [],
+  };
+}
+
+function getQuestionInsights(
+  answers: Record<number, number>
+): { questionId: number; insight: string; type: "warning" | "strength" }[] {
+  const insights: {
+    questionId: number;
+    insight: string;
+    type: "warning" | "strength";
+  }[] = [];
+
+  if (answers[1] <= 2)
+    insights.push({
+      questionId: 1,
+      insight:
+        "Your process is mostly rules-based. Workflow automation or RPA may be a better fit than an AI agent.",
+      type: "warning",
+    });
+  if (answers[1] >= 5)
+    insights.push({
+      questionId: 1,
+      insight:
+        "Deep expertise requirements mean an agent alone won\u2019t be enough. Plan for significant human oversight.",
+      type: "warning",
+    });
+  if (answers[1] >= 3 && answers[1] <= 4)
+    insights.push({
+      questionId: 1,
+      insight:
+        "The right level of interpretation for AI. Complex enough to need it, clear enough for it to work.",
+      type: "strength",
+    });
+
+  if (answers[4] >= 4)
+    insights.push({
+      questionId: 4,
+      insight:
+        "High consequences mean you\u2019ll need solid guardrails, monitoring, and mandatory human review for edge cases.",
+      type: "warning",
+    });
+  if (answers[4] <= 2)
+    insights.push({
+      questionId: 4,
+      insight:
+        "Low-consequence failures are recoverable, which gives you room to iterate and improve.",
+      type: "strength",
+    });
+
+  if (answers[5] <= 2)
+    insights.push({
+      questionId: 5,
+      insight:
+        "Undocumented processes are hard to automate and harder to test. Document first, then automate.",
+      type: "warning",
+    });
+
+  if (answers[6] <= 2)
+    insights.push({
+      questionId: 6,
+      insight:
+        "Without a business case, you\u2019re investing based on excitement rather than evidence. Model the costs before building.",
+      type: "warning",
+    });
+
+  if (answers[7] <= 2)
+    insights.push({
+      questionId: 7,
+      insight:
+        "A human validator is what makes the difference between catching issues early and finding out too late. Worth identifying someone who can check the outputs.",
+      type: "warning",
+    });
+  if (answers[7] >= 4)
+    insights.push({
+      questionId: 7,
+      insight:
+        "Having a ready validator means you can catch problems early and build trust incrementally.",
+      type: "strength",
+    });
+
+  if (answers[8] <= 2)
+    insights.push({
+      questionId: 8,
+      insight:
+        "The teams that succeed with AI agents are the ones where leadership agreed upfront what \u2018good enough\u2019 looks like. Worth having that conversation before building.",
+      type: "warning",
+    });
+  if (answers[8] >= 4)
+    insights.push({
+      questionId: 8,
+      insight:
+        "Leadership alignment on imperfection is a strong foundation, and most teams skip this step entirely.",
+      type: "strength",
+    });
+
+  return insights;
+}
+
+// ─── URL Encoding ────────────────────────────────────────────────
+
+function encodeResults(answers: Record<number, number>): string {
+  const values = questions.map((q) => answers[q.id] || 0);
+  return btoa(values.join(","));
+}
+
+function decodeResults(hash: string): Record<number, number> | null {
+  try {
+    const decoded = atob(hash);
+    const values = decoded.split(",").map(Number);
+    if (values.length !== questions.length || values.some(isNaN)) return null;
+    const answers: Record<number, number> = {};
+    questions.forEach((q, i) => {
+      if (values[i] >= 1 && values[i] <= 5) answers[q.id] = values[i];
+    });
+    return Object.keys(answers).length === questions.length ? answers : null;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Component ───────────────────────────────────────────────────
+
+export default function AssessmentPage() {
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [showResults, setShowResults] = useState(false);
+  const [isSharedView, setIsSharedView] = useState(false);
+  const [email, setEmail] = useState("");
+  const [emailSubmitted, setEmailSubmitted] = useState(false);
+  const resultsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const hash = window.location.hash.replace("#r=", "");
+    if (hash) {
+      const decoded = decodeResults(hash);
+      if (decoded) {
+        setAnswers(decoded);
+        setShowResults(true);
+        setIsSharedView(true);
+        setTimeout(() => {
+          resultsRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+      }
+    }
+  }, []);
+
+  const answeredCount = Object.keys(answers).length;
+  const allAnswered = answeredCount === questions.length;
+
+  const handleAnswer = (questionId: number, value: number) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: value }));
+  };
+
+  const handleSubmit = () => {
+    if (!allAnswered) return;
+    setShowResults(true);
+    const encoded = encodeResults(answers);
+    window.history.replaceState(null, "", `#r=${encoded}`);
+    setTimeout(() => {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
+  const handleReset = () => {
+    setAnswers({});
+    setShowResults(false);
+    setIsSharedView(false);
+    setEmailSubmitted(false);
+    window.history.replaceState(null, "", window.location.pathname);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Generate and download PDF
+    generateResultsPdf({
+      tier: tierResult.tier,
+      tierLabel: tierResult.label,
+      headline: tierResult.headline,
+      description: tierResult.description,
+      percentage,
+      scores: questions.map((q) => ({
+        label: q.shortLabel,
+        score: getRawScore(answers[q.id], q.scoring),
+      })),
+      warnings: warnings.map(
+        (w) =>
+          `${questions.find((q) => q.id === w.questionId)?.shortLabel}: ${w.insight}`
+      ),
+      strengths: strengths.map(
+        (s) =>
+          `${questions.find((q) => q.id === s.questionId)?.shortLabel}: ${s.insight}`
+      ),
+      nextSteps,
+    });
+
+    // Send to Encharge webhook
+    const webhookUrl = process.env.NEXT_PUBLIC_ENCHARGE_WEBHOOK_URL;
+    if (webhookUrl) {
+      try {
+        await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            tier: tierResult.tier,
+            tierLabel: tierResult.label,
+            percentage,
+            scores: Object.fromEntries(
+              questions.map((q) => [
+                q.shortLabel,
+                answers[q.id],
+              ])
+            ),
+            source: "should-this-be-an-agent",
+            assessmentUrl: shareUrl,
+          }),
+        });
+      } catch {
+        // Webhook failure shouldn't block the user experience
+      }
+    }
+
+    setEmailSubmitted(true);
+  };
+
+  // Calculate results
+  const totalWeightedScore = allAnswered
+    ? questions.reduce((sum, q) => sum + getWeightedScore(answers[q.id], q), 0)
+    : 0;
+  const percentage = Math.round((totalWeightedScore / maxWeightedScore) * 100);
+  const tierResult = getTierResult(percentage);
+  const insights = allAnswered ? getQuestionInsights(answers) : [];
+  const warnings = insights.filter((i) => i.type === "warning");
+  const strengths = insights.filter((i) => i.type === "strength");
+  const nextSteps = allAnswered
+    ? getTierNextSteps(percentage, warnings.length > 0)
+    : [];
+
+  const shareUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}${window.location.pathname}#r=${encodeResults(answers)}`
+      : "";
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
+    <main className="flex-1">
+      {/* Header */}
+      <header className="border-b border-ink/10 bg-white/50">
+        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            href="https://serpin.ai"
             target="_blank"
             rel="noopener noreferrer"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+              src="/serpin-logo-black.png"
+              alt="Serpin"
+              width={80}
+              height={20}
+              className="h-5 w-auto"
             />
-            Deploy Now
           </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          <span className="text-xs text-ink-muted">
+            From the Agent Design Framework
+          </span>
         </div>
-      </main>
-    </div>
+      </header>
+
+      {/* Hero */}
+      <section className="max-w-3xl mx-auto px-4 pt-12 pb-8">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-ink leading-tight">
+          Should This Be an Agent?
+        </h1>
+        <p className="mt-4 text-lg text-ink-light leading-relaxed max-w-2xl">
+          Not every process needs an AI agent. Some are better served by
+          automation, workflow tools, or staying with humans. This assessment
+          helps you figure out which one yours is.
+        </p>
+        <div className="mt-6 flex items-center gap-6 text-sm text-ink-muted">
+          <span className="flex items-center gap-1.5">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            2 minutes
+          </span>
+          <span className="flex items-center gap-1.5">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
+            </svg>
+            8 questions
+          </span>
+          <span className="flex items-center gap-1.5">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            Instant results
+          </span>
+        </div>
+      </section>
+
+      {/* Progress Bar */}
+      <div className="max-w-3xl mx-auto px-4 mb-8">
+        <div className="flex items-center justify-between text-xs text-ink-muted mb-2">
+          <span>
+            {answeredCount} of {questions.length} answered
+          </span>
+          {answeredCount > 0 && !allAnswered && (
+            <span>{questions.length - answeredCount} remaining</span>
+          )}
+        </div>
+        <div className="h-1.5 bg-cream-dark rounded-full overflow-hidden">
+          <div
+            className="h-full bg-serpin-yellow rounded-full transition-all duration-500 ease-out"
+            style={{
+              width: `${(answeredCount / questions.length) * 100}%`,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Questions */}
+      <section className="max-w-3xl mx-auto px-4 space-y-6 pb-8">
+        {questions.map((q) => {
+          const isAnswered = answers[q.id] !== undefined;
+          return (
+            <div
+              key={q.id}
+              className={`bg-white rounded-xl border transition-all duration-300 ${
+                isAnswered
+                  ? "border-serpin-yellow/40 shadow-sm"
+                  : "border-ink/10"
+              }`}
+            >
+              <div className="p-5 sm:p-6">
+                {/* Question header */}
+                <div className="flex items-start gap-3 mb-3">
+                  <span
+                    className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
+                      isAnswered
+                        ? "bg-serpin-yellow text-ink"
+                        : "bg-cream-dark text-ink-muted"
+                    }`}
+                  >
+                    {q.id}
+                  </span>
+                  <h2 className="text-base sm:text-lg font-semibold text-ink leading-snug pt-0.5">
+                    {q.question}
+                  </h2>
+                </div>
+
+                {/* Why this matters */}
+                <div className="ml-10 mb-4">
+                  <p className="text-sm text-ink-light leading-relaxed">
+                    {q.why}
+                  </p>
+                  <p className="text-sm text-ink-muted mt-1.5 italic">
+                    Think about: {q.thinkAbout}
+                  </p>
+                </div>
+
+                {/* Options */}
+                <div className="ml-10 space-y-2">
+                  {q.options.map((option, idx) => {
+                    const value = idx + 1;
+                    const isSelected = answers[q.id] === value;
+                    return (
+                      <button
+                        key={value}
+                        onClick={() => handleAnswer(q.id, value)}
+                        className={`w-full text-left px-4 py-2.5 rounded-lg border text-sm transition-all duration-150 cursor-pointer ${
+                          isSelected
+                            ? "border-serpin-yellow bg-serpin-yellow-soft font-medium text-ink"
+                            : "border-ink/10 hover:border-ink/20 hover:bg-cream-dark/50 text-ink-light"
+                        }`}
+                      >
+                        <span className="flex items-center gap-3">
+                          <span
+                            className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                              isSelected
+                                ? "border-serpin-yellow-hover bg-serpin-yellow"
+                                : "border-ink/20"
+                            }`}
+                          >
+                            {isSelected && (
+                              <span className="w-2 h-2 rounded-full bg-ink" />
+                            )}
+                          </span>
+                          {option}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Bell curve hint for Q1 */}
+                {q.id === 1 && (
+                  <div className="ml-10 mt-3 px-4 py-2.5 bg-serpin-yellow-soft border-l-3 border-serpin-yellow-hover rounded-r-lg">
+                    <p className="text-sm text-ink-light">
+                      <span className="font-semibold text-ink">
+                        The sweet spot:
+                      </span>{" "}
+                      Too little interpretation? Code can handle it. Too much?
+                      You need a human. Agents thrive in the middle.
+                    </p>
+                  </div>
+                )}
+
+                {/* Pre-mortem hint for Q4 */}
+                {q.id === 4 && (
+                  <div className="ml-10 mt-3 px-4 py-2.5 bg-serpin-yellow-soft border-l-3 border-serpin-yellow-hover rounded-r-lg">
+                    <p className="text-sm text-ink-light">
+                      <span className="font-semibold text-ink">
+                        Pre-mortem tip:
+                      </span>{" "}
+                      Higher consequences don&apos;t disqualify agents, but
+                      they do mean you&apos;ll need guardrails, monitoring,
+                      and human oversight. Define your kill criteria before you build.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Submit Button */}
+        {!showResults && (
+          <div className="pt-4 pb-8">
+            <button
+              onClick={handleSubmit}
+              disabled={!allAnswered}
+              className={`w-full py-4 rounded-xl font-semibold text-base transition-all duration-200 ${
+                allAnswered
+                  ? "bg-ink text-white hover:bg-ink-light cursor-pointer shadow-lg shadow-ink/10"
+                  : "bg-cream-dark text-ink-muted cursor-not-allowed"
+              }`}
+            >
+              {allAnswered
+                ? "See your results"
+                : `Answer all questions to continue (${questions.length - answeredCount} remaining)`}
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* Results */}
+      {showResults && (
+        <section ref={resultsRef} className="pb-16">
+          {/* Tier Result Banner */}
+          <div
+            className={`border-y border-ink/10 ${
+              tierResult.tier === 1
+                ? "bg-tier1-bg"
+                : tierResult.tier === 2
+                  ? "bg-tier2-bg"
+                  : "bg-tier3-bg"
+            }`}
+          >
+            <div className="max-w-3xl mx-auto px-4 py-10">
+              <div className="flex items-center gap-3 mb-4">
+                <span
+                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold border ${
+                    tierResult.tier === 1
+                      ? "text-tier1 bg-tier1-bg border-tier1/20"
+                      : tierResult.tier === 2
+                        ? "text-tier2 bg-tier2-bg border-tier2/20"
+                        : "text-tier3 bg-tier3-bg border-tier3/20"
+                  }`}
+                >
+                  Tier {tierResult.tier}: {tierResult.label}
+                </span>
+                <span className="text-sm text-ink-muted">
+                  Score: {percentage}%
+                </span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-ink mb-3">
+                {tierResult.headline}
+              </h2>
+              <p className="text-base text-ink-light leading-relaxed max-w-2xl">
+                {tierResult.description}
+              </p>
+            </div>
+          </div>
+
+          {/* Score Breakdown */}
+          <div className="max-w-3xl mx-auto px-4 py-10">
+            <h3 className="text-lg font-semibold text-ink mb-6">
+              Your score breakdown
+            </h3>
+            <div className="space-y-4">
+              {questions.map((q) => {
+                const raw = getRawScore(answers[q.id], q.scoring);
+                const barWidth = (raw / 5) * 100;
+                return (
+                  <div key={q.id}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-ink font-medium">
+                        {q.shortLabel}
+                      </span>
+                      <span className="text-sm text-ink-muted">
+                        {raw}/5
+                      </span>
+                    </div>
+                    <div className="h-5 bg-cream-dark rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ease-out ${
+                          raw >= 4
+                            ? "bg-tier1"
+                            : raw >= 3
+                              ? "bg-serpin-yellow-hover"
+                              : "bg-tier3/70"
+                        }`}
+                        style={{ width: `${barWidth}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-ink-muted mt-4">
+              Not all questions are weighted equally. Interpretation level,
+              consequences, human validation, and leadership readiness carry
+              more weight in the final score.
+            </p>
+          </div>
+
+          {/* Insights */}
+          {insights.length > 0 && (
+            <div className="max-w-3xl mx-auto px-4 pb-10">
+              {warnings.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-ink mb-4">
+                    Areas to address
+                  </h3>
+                  <div className="space-y-3">
+                    {warnings.map((insight, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-3 p-4 bg-tier3-bg rounded-xl border border-tier3/10"
+                      >
+                        <svg
+                          className="w-5 h-5 text-tier3 shrink-0 mt-0.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                          />
+                        </svg>
+                        <div>
+                          <p className="text-sm font-medium text-ink">
+                            Q{insight.questionId}:{" "}
+                            {
+                              questions.find((q) => q.id === insight.questionId)
+                                ?.question
+                            }
+                          </p>
+                          <p className="text-sm text-ink-light mt-1">
+                            {insight.insight}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {strengths.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-ink mb-4">
+                    Working in your favour
+                  </h3>
+                  <div className="space-y-3">
+                    {strengths.map((insight, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-3 p-4 bg-tier1-bg rounded-xl border border-tier1/10"
+                      >
+                        <svg
+                          className="w-5 h-5 text-tier1 shrink-0 mt-0.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <div>
+                          <p className="text-sm font-medium text-ink">
+                            Q{insight.questionId}:{" "}
+                            {
+                              questions.find((q) => q.id === insight.questionId)
+                                ?.question
+                            }
+                          </p>
+                          <p className="text-sm text-ink-light mt-1">
+                            {insight.insight}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Next Steps */}
+          <div className="max-w-3xl mx-auto px-4 pb-10">
+            <h3 className="text-lg font-semibold text-ink mb-4">
+              Recommended next steps
+            </h3>
+            <div className="bg-white rounded-xl border border-ink/10 p-5">
+              <ol className="space-y-3">
+                {nextSteps.map((step, idx) => (
+                  <li key={idx} className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-cream-dark flex items-center justify-center text-xs font-semibold text-ink-muted">
+                      {idx + 1}
+                    </span>
+                    <p className="text-sm text-ink-light leading-relaxed pt-0.5">
+                      {step}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+
+          {/* Email CTA */}
+          <div className="max-w-3xl mx-auto px-4 pb-10">
+            <div className="bg-white rounded-xl border border-ink/10 p-6">
+              <h3 className="text-lg font-semibold text-ink mb-2">
+                Get the next four questions
+              </h3>
+              <p className="text-sm text-ink-light mb-5">
+                This assessment covers Question 1 of five. We&apos;re building
+                tools for the remaining four (process mapping, agent design,
+                quality, and deployment). Leave your email and we&apos;ll send
+                them as they ship.
+              </p>
+
+              {!emailSubmitted ? (
+                <form
+                  onSubmit={handleEmailSubmit}
+                  className="flex flex-col sm:flex-row gap-3"
+                >
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="flex-1 px-4 py-3 rounded-lg border border-ink/15 bg-cream text-sm text-ink placeholder:text-ink-muted/50 focus:outline-none focus:ring-2 focus:ring-serpin-yellow focus:border-serpin-yellow"
+                  />
+                  <button
+                    type="submit"
+                    className="px-6 py-3 bg-ink text-white rounded-lg font-medium text-sm hover:bg-ink-light transition-colors cursor-pointer whitespace-nowrap"
+                  >
+                    Download results &amp; sign up
+                  </button>
+                </form>
+              ) : (
+                <div className="flex items-center gap-2 p-3 bg-tier1-bg rounded-lg">
+                  <svg
+                    className="w-5 h-5 text-tier1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="text-sm text-tier1 font-medium">
+                    Your PDF is downloading. We&apos;ll email you when the
+                    next questions are ready.
+                  </p>
+                </div>
+              )}
+
+              {/* Share link */}
+              <div className="mt-5 pt-5 border-t border-ink/10">
+                <p className="text-sm text-ink-muted mb-2">
+                  Share your results with your team:
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={shareUrl}
+                    className="flex-1 px-3 py-2 rounded-lg border border-ink/10 bg-cream-dark text-xs text-ink-muted font-mono truncate"
+                  />
+                  <button
+                    onClick={() => navigator.clipboard.writeText(shareUrl)}
+                    className="px-3 py-2 text-xs font-medium text-ink-light border border-ink/15 rounded-lg hover:bg-cream-dark transition-colors cursor-pointer whitespace-nowrap"
+                  >
+                    Copy link
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Reset */}
+          <div className="max-w-3xl mx-auto px-4 pb-10 flex flex-col sm:flex-row items-center gap-4">
+            <button
+              onClick={handleReset}
+              className="text-sm text-ink-muted hover:text-ink transition-colors cursor-pointer"
+            >
+              \u2190 Take the assessment again
+            </button>
+            {isSharedView && (
+              <span className="text-xs text-ink-muted">
+                This is a shared result. Take the assessment yourself to get
+                personalised insights.
+              </span>
+            )}
+          </div>
+
+          {/* Footer CTA */}
+          <div className="border-t border-ink/10 bg-white/50">
+            <div className="max-w-3xl mx-auto px-4 py-10 text-center">
+              <p className="text-sm text-ink-muted mb-2">
+                This assessment is Question 1 of
+              </p>
+              <p className="text-lg font-semibold text-ink mb-3">
+                The Five Questions of Agent Design
+              </p>
+              <p className="text-sm text-ink-light max-w-md mx-auto mb-5">
+                A practical framework for designing AI agents that work in
+                production, built from real project experience.
+              </p>
+              <a
+                href="https://serpin.ai/agent-design"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-ink text-white rounded-lg text-sm font-medium hover:bg-ink-light transition-colors"
+              >
+                Learn more about Agent Design
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                  />
+                </svg>
+              </a>
+            </div>
+          </div>
+        </section>
+      )}
+    </main>
   );
 }

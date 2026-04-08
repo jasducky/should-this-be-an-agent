@@ -22,7 +22,7 @@ const questions: Question[] = [
   {
     id: 1,
     question: "How much human interpretation does this process need?",
-    shortLabel: "Interpretation needed",
+    shortLabel: "Task complexity",
     why: "This is the code\u2013AI\u2013human spectrum. Code handles structured logic, humans handle complex judgement, and agents fill the middle, where inputs are unstructured but the decision logic is clear enough to follow rules.",
     thinkAbout:
       "Could you write a decision tree for every scenario? If yes, code can handle it and you don\u2019t need AI.",

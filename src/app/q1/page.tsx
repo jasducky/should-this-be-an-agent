@@ -846,7 +846,7 @@ export default function AssessmentPage() {
 
                 {/* Bell curve hint for Q1 */}
                 {q.id === 1 && (
-                  <div className="ml-10 mt-3 px-4 py-2.5 bg-serpin-yellow-soft border-l-3 border-serpin-yellow-hover rounded-r-lg">
+                  <div className="ml-10 mt-3 px-4 py-2.5 bg-cream-dark border-l-3 border-ink/20 rounded-r-lg">
                     <p className="text-sm text-ink-light">
                       <span className="font-semibold text-ink">
                         The sweet spot:
@@ -859,7 +859,7 @@ export default function AssessmentPage() {
 
                 {/* Pre-mortem hint for Q4 */}
                 {q.id === 4 && (
-                  <div className="ml-10 mt-3 px-4 py-2.5 bg-serpin-yellow-soft border-l-3 border-serpin-yellow-hover rounded-r-lg">
+                  <div className="ml-10 mt-3 px-4 py-2.5 bg-cream-dark border-l-3 border-ink/20 rounded-r-lg">
                     <p className="text-sm text-ink-light">
                       <span className="font-semibold text-ink">
                         Pre-mortem tip:

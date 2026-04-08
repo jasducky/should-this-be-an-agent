@@ -23,7 +23,7 @@ const questions: Question[] = [
     id: 1,
     question: "How much thinking does this process involve?",
     shortLabel: "Task complexity",
-    why: "Some processes follow clear rules every time. Others need someone to read the situation and make a call. AI agents are most useful in the middle \u2014 where the work isn\u2019t routine enough to automate with rules, but it\u2019s predictable enough that a system can learn to handle it.",
+    why: "Some processes follow clear rules every time. Others need someone to read the situation and make a call. AI agents are most useful in the middle, where the work isn\u2019t routine enough to automate with rules, but it\u2019s predictable enough that a system can learn to handle it.",
     thinkAbout:
       "Could you write a step-by-step checklist that covers every scenario? If yes, you probably don\u2019t need AI. If every case is different, that\u2019s where an agent might help.",
     options: [
@@ -40,7 +40,7 @@ const questions: Question[] = [
     id: 2,
     question: "How variable are the inputs?",
     shortLabel: "Input variability",
-    why: "If every case looks the same, a simple system can handle it. AI earns its place when each case is different \u2014 different formats, different wording, different situations that can\u2019t be captured in a template.",
+    why: "If every case looks the same, a simple system can handle it. AI earns its place when each case is different: different formats, different wording, different situations that can\u2019t be captured in a template.",
     thinkAbout:
       "If you built a form with dropdown menus, could it capture every possible input? If not, that\u2019s where AI starts to add value.",
     options: [
@@ -58,7 +58,7 @@ const questions: Question[] = [
     id: 3,
     question: "How much of the process is already documented?",
     shortLabel: "Process documentation",
-    why: "PMs call this the bus factor. If your expert left tomorrow, could someone else do their job from the docs? Undocumented processes are full of tribal knowledge that\u2019s hard to automate and harder to test.",
+    why: "The bus factor test: if your expert left tomorrow, could someone else do their job from the docs? Undocumented processes are full of tribal knowledge that\u2019s hard to automate and harder to test.",
     thinkAbout:
       "Is there a process map, decision tree, or even a checklist? Or does it all live in someone\u2019s head?",
     options: [
@@ -75,7 +75,7 @@ const questions: Question[] = [
     id: 4,
     question: "Do you have access to the data the agent would need?",
     shortLabel: "Data readiness",
-    why: "Data readiness is the most common technical reason AI projects stall. If the data your agent needs is scattered across systems, incomplete, or locked behind access barriers, that\u2019s a problem to solve before the build starts, not during it.",
+    why: "This is one of the most common reasons AI projects stall. If the data your agent needs is scattered across systems, incomplete, or hard to access, that\u2019s a problem to solve before the build starts, not during it.",
     thinkAbout:
       "Where does the data live? Can you access it? Is it in a state you could work with, or would it need significant cleaning or restructuring first?",
     options: [
@@ -145,9 +145,9 @@ const questions: Question[] = [
     id: 8,
     question: "What happens when it gets it wrong?",
     shortLabel: "Consequence of errors",
-    why: "This is where you run a pre-mortem: \u2018Imagine this agent has been live for three months and something has gone wrong. What happened?\u2019 Understanding the consequences upfront helps you design the right level of guardrails and human oversight.",
+    why: "Think about what could go wrong and what the impact would be. If a mistake is easy to fix, you\u2019ve got room to learn as you go. If a mistake has serious consequences, you\u2019ll need more oversight and checks in place from the start.",
     thinkAbout:
-      "Run a quick pre-mortem: what\u2019s the most likely thing to go wrong? Who would notice, and how quickly?",
+      "What\u2019s the most likely thing to go wrong? Who would notice, and how quickly could it be fixed?",
     options: [
       "Minor inconvenience, easily fixed",
       "Some wasted time or rework",
@@ -164,7 +164,7 @@ const questions: Question[] = [
     question:
       "Does leadership understand this won\u2019t be right 100% of the time?",
     shortLabel: "Leadership readiness",
-    why: "Teams that align on \u2018good enough\u2019 before building have a much higher success rate. Only 12% of agent projects make it to production, and the ones that do tend to have leadership who understood from the start that AI is probabilistic, not perfect.",
+    why: "Teams that align on \u2018good enough\u2019 before building have a much higher success rate. The ones that make it to production tend to have leadership who understood from the start that AI won\u2019t be right every time.",
     thinkAbout:
       "Has anyone asked: \u2018What error rate would we accept?\u2019 If that conversation hasn\u2019t happened, start there before building anything.",
     options: [
@@ -935,8 +935,8 @@ export default function AssessmentPage() {
                       </span>{" "}
                       If every case follows the same rules, automation handles it
                       without AI. If every case needs deep expertise, you need a
-                      person. Agents work best where there&apos;s a pattern but each
-                      case needs some thinking.
+                      person. Agents work best where there&apos;s a pattern but
+                      each case needs some thinking through.
                     </p>
                   </div>
                 )}
@@ -946,11 +946,12 @@ export default function AssessmentPage() {
                   <div className="ml-10 mt-3 px-4 py-2.5 bg-cream-dark border-l-3 border-ink/20 rounded-r-lg">
                     <p className="text-sm text-ink-light">
                       <span className="font-semibold text-ink">
-                        Pre-mortem tip:
+                        Worth knowing:
                       </span>{" "}
-                      Higher consequences don&apos;t disqualify agents, but
-                      they do mean you&apos;ll need guardrails, monitoring,
-                      and human oversight. Define your kill criteria before you build.
+                      Higher consequences don&apos;t rule agents out, but
+                      they do mean you&apos;ll need more checks in place
+                      and someone reviewing the output. Think about what
+                      would make you pull the plug, and agree on that before you start building.
                     </p>
                   </div>
                 )}

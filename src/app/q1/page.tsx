@@ -21,17 +21,17 @@ const questions: Question[] = [
   // ─── Block 1: Is the task right for AI? ─────────────────────────
   {
     id: 1,
-    question: "How much human interpretation does this process need?",
+    question: "How much does someone need to think through each case?",
     shortLabel: "Task complexity",
-    why: "This is the code\u2013AI\u2013human spectrum. Code handles structured logic, humans handle complex judgement, and agents fill the middle, where inputs are unstructured but the decision logic is clear enough to follow rules.",
+    why: "Some processes follow clear rules every time. Others need someone to read the situation and make a call. AI agents are most useful in the middle \u2014 where the work isn\u2019t routine enough to automate with rules, but it\u2019s structured enough that the right answer can be learned.",
     thinkAbout:
-      "Could you write a decision tree for every scenario? If yes, code can handle it and you don\u2019t need AI.",
+      "Could you write a step-by-step checklist that covers every scenario? If yes, you probably don\u2019t need AI. If every case is different, that\u2019s where an agent might help.",
     options: [
-      "Purely rules-based, no ambiguity",
-      "Mostly rules, occasional edge cases",
-      "Mix of rules and interpretation",
-      "Significant interpretation required",
-      "Requires deep expertise and judgement",
+      "Purely rules-based, no thinking needed",
+      "Mostly rules, occasional judgement calls",
+      "Mix of rules and judgement",
+      "Significant judgement required",
+      "Requires deep expertise and experience",
     ],
     weight: 1.5,
     scoring: "bell",
@@ -40,9 +40,9 @@ const questions: Question[] = [
     id: 2,
     question: "How variable are the inputs?",
     shortLabel: "Input variability",
-    why: "This is about edge case density: how many exceptions exist per standard case. AI earns its place when inputs can\u2019t be captured by fixed templates, dropdown menus, or structured forms.",
+    why: "If every case looks the same, a simple system can handle it. AI earns its place when each case is different \u2014 different formats, different wording, different situations that can\u2019t be captured in a template.",
     thinkAbout:
-      "If you built a form with dropdown menus, could it capture every possible input? If not, that\u2019s where AI adds value.",
+      "If you built a form with dropdown menus, could it capture every possible input? If not, that\u2019s where AI starts to add value.",
     options: [
       "Always the same format",
       "Mostly consistent, minor variations",
@@ -93,7 +93,7 @@ const questions: Question[] = [
     question:
       "Is there a human who currently does this and can validate the agent\u2019s work?",
     shortLabel: "Human validator",
-    why: "In AI products, this is about ground truth: having someone who can verify whether the agent\u2019s output is correct. A human validator gives you a way to establish what \u2018right\u2019 looks like, catch issues early, and build confidence in the system over time.",
+    why: "You need someone who knows the process well enough to spot when the agent gets it wrong. Without that person, errors go unnoticed and trust erodes. With them, you can catch problems early and improve the agent over time.",
     thinkAbout:
       "Who would check the agent\u2019s work? Would they spot it if the agent got something subtly wrong?",
     options: [
@@ -111,9 +111,9 @@ const questions: Question[] = [
     id: 6,
     question: "What\u2019s the volume?",
     shortLabel: "Volume",
-    why: "This is unit economics for AI. Every agent interaction has a per-use cost (inference, retrieval, retries, moderation), and the true cost per task is typically 10\u201350\u00d7 the posted API price. Low volume rarely pays back.",
+    why: "AI agents have a per-use cost every time they run. At low volumes, the cost of building and running an agent usually outweighs what you\u2019d save. Higher volume means the investment is more likely to pay back.",
     thinkAbout:
-      "What would each interaction cost? Multiply by volume, then compare to the current human cost for the same work.",
+      "How many times a day or week does this process run? If it\u2019s only a handful, the economics may not work.",
     options: [
       "A few per week",
       "A few per day",
@@ -128,9 +128,9 @@ const questions: Question[] = [
     id: 7,
     question: "Does the business case hold up at current AI costs?",
     shortLabel: "Business case",
-    why: "This is your viability gate, not a full business case but a sanity check. If you haven\u2019t modelled cost-to-serve against the value created, you\u2019re investing based on excitement rather than evidence.",
+    why: "This doesn\u2019t need to be a full business case, but it does need to be more than a hunch. If you haven\u2019t compared what the agent would cost to run against what you\u2019re spending now, you\u2019re investing based on excitement rather than evidence.",
     thinkAbout:
-      "Can you estimate: cost per AI interaction \u00d7 expected volume vs. current human cost for the same work?",
+      "Can you roughly estimate what each AI interaction would cost, multiplied by how often it runs, compared to the current human cost?",
     options: [
       "Haven\u2019t thought about it",
       "Rough idea, not confident",
@@ -915,16 +915,18 @@ export default function AssessmentPage() {
                   <div className="ml-10 mt-3 px-4 py-2.5 bg-cream-dark border-l-3 border-ink/20 rounded-r-lg">
                     <p className="text-sm text-ink-light">
                       <span className="font-semibold text-ink">
-                        The sweet spot:
+                        The middle is the sweet spot.
                       </span>{" "}
-                      Too little interpretation? Code can handle it. Too much?
-                      You need a human. Agents thrive in the middle.
+                      If every case follows the same rules, automation handles it
+                      without AI. If every case needs deep expertise, you need a
+                      person. Agents work best where there&apos;s a pattern but each
+                      case needs some thinking.
                     </p>
                   </div>
                 )}
 
-                {/* Pre-mortem hint for Q4 */}
-                {q.id === 4 && (
+                {/* Pre-mortem hint for Q8 (consequences) */}
+                {q.id === 8 && (
                   <div className="ml-10 mt-3 px-4 py-2.5 bg-cream-dark border-l-3 border-ink/20 rounded-r-lg">
                     <p className="text-sm text-ink-light">
                       <span className="font-semibold text-ink">

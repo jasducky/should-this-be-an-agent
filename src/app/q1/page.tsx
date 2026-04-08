@@ -360,7 +360,7 @@ function getTierResult(percentage: number, answers: Record<number, number>, warn
       label: "Hybrid",
       headline: "Parts of this suit AI. Parts don\u2019t.",
       description:
-        "Your use case has potential, but some factors need addressing first. The scores above show you which areas to focus on.",
+        "Your use case has potential, but some factors need addressing first. The score breakdown below shows you which areas to focus on.",
       nextSteps: [],
     };
   }

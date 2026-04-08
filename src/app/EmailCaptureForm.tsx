@@ -18,7 +18,7 @@ export default function EmailCaptureForm() {
     localStorage.setItem("serpin_email", email);
 
     try {
-      await fetch("/api/submit", {
+      await fetch("/api/notify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -84,9 +84,8 @@ export default function LandingPage() {
         <p className="mt-5 text-lg text-ink-light leading-relaxed max-w-2xl">
           Most agent projects fail not because the AI isn&apos;t good enough,
           but because no one asked the right questions first. These five
-          assessments are a guided starting point &mdash; they won&apos;t
-          replace the full framework, but they&apos;ll show you where to focus
-          and what to address before you build.
+          assessments help you figure out where to focus, what to address,
+          and whether you&apos;re ready to build.
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-ink-muted">
           <span className="flex items-center gap-1.5 border border-ink/10 rounded-full px-3 py-1.5">

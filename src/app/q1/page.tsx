@@ -575,6 +575,22 @@ function getQuestionInsights(
     }
   }
 
+  // ─── All-moderate nudge ────────────────────────────────────────
+  // If all answers are 3 and no warnings fired, add an investigation prompt.
+  const allAnswerValues = Object.values(answers);
+  if (
+    allAnswerValues.length === questions.length &&
+    allAnswerValues.every((v) => v === 3) &&
+    insights.filter((i) => i.type === "warning").length === 0
+  ) {
+    insights.push({
+      questionId: 0,
+      insight:
+        "All your answers are in the middle range, which often means the use case hasn\u2019t been fully explored yet. Try revisiting each question with a specific process in mind \u2014 the areas where you\u2019re least certain are usually where the real answer is hiding.",
+      type: "warning",
+    });
+  }
+
   return insights;
 }
 

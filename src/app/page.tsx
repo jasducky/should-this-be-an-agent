@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import EmailCaptureForm from "./EmailCaptureForm";
 
 const questions = [
   {
@@ -340,24 +341,7 @@ export default function LandingPage() {
             We&apos;ll email you when the next assessment goes live. You&apos;ll
             also get a summary of all five results when the series is complete.
           </p>
-          <form className="flex flex-col sm:flex-row gap-3 max-w-md">
-            <input
-              type="email"
-              placeholder="Your work email"
-              className="flex-1 px-4 py-3 rounded-md border border-white/15 bg-white/5 text-white text-sm placeholder:text-white/35 focus:outline-none focus:border-serpin-yellow"
-            />
-            <button
-              type="submit"
-              className="px-5 py-3 bg-serpin-yellow text-ink rounded-md text-sm font-semibold uppercase tracking-wide hover:bg-serpin-yellow-hover transition-colors whitespace-nowrap cursor-pointer"
-            >
-              Notify me
-            </button>
-          </form>
-          <p className="mt-3 text-xs text-white/30">
-            We&apos;ll email you when the next question unlocks &mdash;
-            that&apos;s it. No spam, no selling your data. Unsubscribe any
-            time.
-          </p>
+          <EmailCaptureForm />
         </div>
       </section>
 

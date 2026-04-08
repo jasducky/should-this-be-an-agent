@@ -611,6 +611,11 @@ export default function AssessmentPage() {
   const resultsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Pre-fill email from localStorage if available
+    const savedEmail = localStorage.getItem("serpin_email");
+    if (savedEmail) setEmail(savedEmail);
+
+    // Restore results from URL hash if shared link
     const hash = window.location.hash.replace("#r=", "");
     if (hash) {
       const decoded = decodeResults(hash);
@@ -653,6 +658,9 @@ export default function AssessmentPage() {
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Persist email to localStorage for cross-page sharing
+    localStorage.setItem("serpin_email", email);
 
     // Generate and download PDF
     generateResultsPdf({

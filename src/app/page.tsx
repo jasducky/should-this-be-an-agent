@@ -196,38 +196,113 @@ interface TierResult {
   nextSteps: string[];
 }
 
-function getTierNextSteps(percentage: number, hasWarnings: boolean): string[] {
-  if (percentage >= 70) {
-    const steps: string[] = [];
+function getTierNextSteps(tier: number, answers: Record<number, number>, warningInsights: { questionId: number; insight: string; type: "warning" | "strength" }[]): string[] {
+  const warnings = warningInsights.filter((w) => w.type === "warning");
+  const hasWarnings = warnings.length > 0;
+  const warningQuestions = new Set(warnings.map((w) => w.questionId));
+  const steps: string[] = [];
+
+  if (tier === 1) {
     if (hasWarnings) {
-      steps.push("Review the areas flagged above and make sure each one has a plan before you move forward");
+      steps.push("Address the areas flagged above — each one needs a specific plan before you move forward");
     }
+    // Actionable Tier 1 steps
+    steps.push("Test your assumptions: find 100\u2013200 historical examples of this task and check whether an AI could reproduce the human decision");
     steps.push("Share this result with your team so everyone starts with the same understanding of what\u2019s involved");
     steps.push("The next step is Question 2: understanding the real process behind this use case. Sign up below and we\u2019ll send it when it\u2019s ready");
     return steps;
   }
-  if (percentage >= 45) {
-    const steps: string[] = [];
-    if (hasWarnings) {
-      steps.push("Review the areas flagged above. These are the things worth addressing before investing in a build");
-      steps.push("Talk to your team about those areas, particularly around risk tolerance and validation");
-    } else {
-      steps.push("Your scores are solid across the board. Share this result with your team as a starting point for the conversation");
+
+  if (tier === 2) {
+    // Warning-specific actionable steps
+    if (warningQuestions.has(5)) {
+      steps.push("Document the process first: shadow the person who does this for a full cycle and write down every decision they make, including the edge cases");
+    }
+    if (warningQuestions.has(6)) {
+      steps.push("Build a simple business case: (cost per AI interaction \u00d7 expected volume) vs. the current human cost for the same work");
+    }
+    if (warningQuestions.has(7)) {
+      steps.push("Identify a validator: find someone who can check the agent\u2019s work during a pilot, even if it\u2019s just spot-checking 10% of outputs");
+    }
+    if (warningQuestions.has(8)) {
+      steps.push("Have the \u2018good enough\u2019 conversation with leadership: agree on what error rate would be acceptable before investing in a build");
+    }
+    if (warningQuestions.has(4)) {
+      steps.push("Map your risk: run a pre-mortem with your team and define kill criteria \u2014 what would make you shut the agent down?");
+    }
+    if (!hasWarnings) {
+      steps.push("Your scores show potential across the board. Share this with your team as a starting point for the conversation");
     }
     steps.push("The next step is Question 2: breaking the process down to see which parts suit AI and which don\u2019t. Sign up below and we\u2019ll send it when it\u2019s ready");
     return steps;
   }
-  const steps: string[] = [
-    "Look at workflow automation tools (like Zapier, Make, or n8n) for structured, rules-based processes",
-  ];
+
+  // Tier 3
+  if ((answers[1] ?? 0) <= 2) {
+    steps.push("This process is rules-based enough for workflow automation (tools like Zapier, Make, n8n) or RPA \u2014 explore those first");
+  } else {
+    steps.push("Consider workflow automation for the structured parts of this process, and keep the judgement-heavy parts with humans for now");
+  }
+  if (warningQuestions.has(5)) {
+    steps.push("Before automating anything: document the process. Shadow the person who does this and capture every decision, especially the edge cases");
+  }
+  if ((answers[4] ?? 0) >= 4) {
+    steps.push("For high-consequence processes, involve your compliance or legal team before evaluating any automation \u2014 they\u2019ll have requirements you need to design for");
+  }
   if (hasWarnings) {
     steps.push("The areas flagged above are worth addressing regardless of the solution you choose");
   }
-  steps.push("If you think parts of the process might still suit AI, try the assessment again with a narrower scope, focusing on one specific sub-task rather than the whole process");
+  steps.push("If parts of this process might still suit AI, try the assessment again with a narrower scope \u2014 focus on one specific sub-task rather than the whole process");
   return steps;
 }
 
-function getTierResult(percentage: number): TierResult {
+function getTierResult(percentage: number, answers: Record<number, number>, warnings: { questionId: number; insight: string; type: "warning" | "strength" }[]): TierResult {
+  const warningCount = warnings.filter((w) => w.type === "warning").length;
+
+  // ─── Override 1: Task-fit floor ───────────────────────────────
+  // If interpretation AND variability are both very low, this isn't an agent task
+  // regardless of how ready the organisation is.
+  const lowTaskFit = (answers[1] ?? 0) <= 1 && (answers[2] ?? 0) <= 1;
+  if (lowTaskFit && percentage >= 45) {
+    return {
+      tier: 3,
+      label: "Not an Agent",
+      headline: "This is better solved with automation, not an AI agent.",
+      description:
+        "Your process is rules-based with consistent inputs — that\u2019s a strength, not a limitation. Tools like OCR, RPA, or workflow automation can handle this more reliably and at lower cost than an AI agent. Your organisation\u2019s readiness is a genuine asset — it means any automation project is likely to succeed.",
+      nextSteps: [],
+    };
+  }
+
+  // ─── Override 2: Danger combination ───────────────────────────
+  // When multiple severe warnings combine with high consequences,
+  // force Tier 3 regardless of score.
+  const highConsequences = (answers[4] ?? 0) >= 4;
+  if (warningCount >= 4 && highConsequences && percentage >= 45) {
+    return {
+      tier: 3,
+      label: "Not an Agent",
+      headline: "Don\u2019t build this agent yet.",
+      description:
+        "The task itself may suit AI, but the conditions aren\u2019t in place to build it safely. Too many critical factors — documentation, validation, business case, leadership alignment — are missing at the same time, and the consequences of getting it wrong are severe. Address the areas flagged below before reconsidering.",
+      nextSteps: [],
+    };
+  }
+
+  // ─── Override 3: Score-warning contradiction ──────────────────
+  // If the rules-based warning fires, cap at Tier 2 with reframed messaging.
+  const ruleBasedWarning = (answers[1] ?? 0) <= 2;
+  if (ruleBasedWarning && percentage >= 70) {
+    return {
+      tier: 2,
+      label: "Automation First",
+      headline: "Strong automation candidate — but an AI agent may not be the right tool.",
+      description:
+        "Your use case scores well on organisation readiness, consequences, and validation — all signs of a project likely to succeed. But the process itself is mostly rules-based, which means structured automation (RPA, workflow tools, or document processing) may handle it better than an AI agent. Evaluate those options first — if the edge cases still need AI interpretation, consider a hybrid approach.",
+      nextSteps: [],
+    };
+  }
+
   if (percentage >= 70) {
     return {
       tier: 1,
@@ -238,6 +313,23 @@ function getTierResult(percentage: number): TierResult {
       nextSteps: [],
     };
   }
+
+  // ─── Override 4: Uniform moderate scores ──────────────────────
+  // Detect all-middle answers and reframe from "solid" to "needs investigation"
+  const answerValues = Object.values(answers);
+  const allModerate = answerValues.length === questions.length &&
+    answerValues.every((v) => v === 3);
+  if (allModerate) {
+    return {
+      tier: 2,
+      label: "Hybrid",
+      headline: "Parts of this suit AI. Parts don\u2019t.",
+      description:
+        "Your scores are moderate across the board, which often means the use case needs deeper investigation. Try exploring each question in more detail — where you\u2019re uncertain, that\u2019s where the real answer is hiding. Consider re-taking this after a closer look at your process.",
+      nextSteps: [],
+    };
+  }
+
   if (percentage >= 45) {
     return {
       tier: 2,
@@ -285,70 +377,145 @@ function getQuestionInsights(
     insights.push({
       questionId: 1,
       insight:
-        "The right level of interpretation for AI. Complex enough to need it, clear enough for it to work.",
+        answers[1] === 3
+          ? "A good mix of rules and interpretation \u2014 structured enough to define clear success criteria, flexible enough to need AI."
+          : "Significant interpretation is where AI agents add the most value. Make sure you have enough examples to test against.",
       type: "strength",
     });
 
+  // Q2 — Input variability (also covers data quality gap)
+  if (answers[2] >= 4)
+    insights.push({
+      questionId: 2,
+      insight:
+        "Highly variable inputs are where AI shines \u2014 but also where it fails unpredictably. Check the quality of your input data: messy, incomplete, or inconsistent inputs will cap what any agent can do.",
+      type: "warning",
+    });
+  if (answers[2] <= 1 && answers[1] <= 2)
+    insights.push({
+      questionId: 2,
+      insight:
+        "Consistent, structured inputs are a sign this process can be fully automated with rules \u2014 no AI interpretation needed.",
+      type: "strength",
+    });
+
+  // Q4 — Consequences
   if (answers[4] >= 4)
     insights.push({
       questionId: 4,
       insight:
-        "High consequences mean you\u2019ll need solid guardrails, monitoring, and mandatory human review for edge cases.",
+        answers[4] >= 5
+          ? "Regulatory or legal consequences mean any automation needs explainable reasoning, audit trails, and sign-off from your compliance and legal teams before you proceed."
+          : "High consequences mean you\u2019ll need solid guardrails, monitoring, and mandatory human review for edge cases. Define your kill criteria before you build.",
       type: "warning",
     });
   if (answers[4] <= 2)
     insights.push({
       questionId: 4,
       insight:
-        "Low-consequence failures are recoverable, which gives you room to iterate and improve.",
+        answers[4] === 1
+          ? "Minor-inconvenience failures give you a safe environment to experiment. Use that \u2014 launch a pilot, learn fast, iterate."
+          : "Errors here mean some rework, not real damage. That gives you room to iterate and improve the agent over time.",
       type: "strength",
     });
 
+  // Q5 — Documentation
   if (answers[5] <= 2)
     insights.push({
       questionId: 5,
       insight:
-        "Undocumented processes are hard to automate and harder to test. Document first, then automate.",
+        answers[5] === 1
+          ? "This process lives entirely in people\u2019s heads. That\u2019s your first job: capture the knowledge before you can automate any of it."
+          : "Partially documented with tribal knowledge gaps. Map out the undocumented decisions \u2014 those are where the agent will fail first.",
       type: "warning",
     });
+  if (answers[5] >= 4)
+    insights.push({
+      questionId: 5,
+      insight:
+        answers[5] === 5
+          ? "Fully mapped processes are the easiest to automate and the easiest to test. Your documentation is a genuine head start."
+          : "Well-documented processes give you a strong foundation for building test cases and defining what \u2018right\u2019 looks like.",
+      type: "strength",
+    });
 
+  // Q6 — Business case
   if (answers[6] <= 2)
     insights.push({
       questionId: 6,
       insight:
-        "Without a business case, you\u2019re investing based on excitement rather than evidence. Model the costs before building.",
+        answers[6] === 1
+          ? "No cost modelling yet. Before building anything, estimate: (cost per AI interaction \u00d7 volume) vs. what you\u2019re spending now."
+          : "A rough business case isn\u2019t enough to invest on. Sharpen it: what specifically does the agent save, and what does it cost to run?",
       type: "warning",
     });
 
+  // Q7 — Human validator
   if (answers[7] <= 2)
     insights.push({
       questionId: 7,
       insight:
-        "A human validator is what makes the difference between catching issues early and finding out too late. Worth identifying someone who can check the outputs.",
+        answers[7] === 1
+          ? "No one does this today, which means no one can tell you if the agent got it right. You need ground truth before you can build."
+          : "Your previous validator has moved on. Find someone who understands what \u2018correct\u2019 looks like \u2014 without that, you\u2019re flying blind.",
       type: "warning",
     });
   if (answers[7] >= 4)
     insights.push({
       questionId: 7,
       insight:
-        "Having a ready validator means you can catch problems early and build trust incrementally.",
+        answers[7] === 5
+          ? "A willing, ready validator is rare and valuable. They\u2019ll be your quality backstop during the pilot \u2014 invest in keeping them engaged."
+          : "Someone who can spot-check regularly gives you a feedback loop. Use it: structured reviews, not just ad-hoc checks.",
       type: "strength",
     });
 
+  // Q8 — Leadership readiness
   if (answers[8] <= 2)
     insights.push({
       questionId: 8,
       insight:
-        "The teams that succeed with AI agents are the ones where leadership agreed upfront what \u2018good enough\u2019 looks like. Worth having that conversation before building.",
+        answers[8] === 1
+          ? "Leadership expects perfection. That\u2019s a project-stopper for AI. Have the \u2018what error rate would we accept?\u2019 conversation before investing."
+          : "Leadership says they understand AI isn\u2019t perfect, but that hasn\u2019t been tested. Align on specific tolerances before the first demo.",
       type: "warning",
     });
   if (answers[8] >= 4)
     insights.push({
       questionId: 8,
       insight:
-        "Leadership alignment on imperfection is a strong foundation, and most teams skip this step entirely.",
+        answers[8] === 5
+          ? "Agreed tolerances are the strongest foundation you can have. Most teams never get here \u2014 you\u2019re ahead of the curve."
+          : "You\u2019ve discussed acceptable error rates, which puts you ahead of most teams. Formalise those numbers before the pilot starts.",
       type: "strength",
     });
+
+  // ─── Tier 1 monitoring nudge ───────────────────────────────────
+  // Every Tier 1 result should get at least one caution.
+  // If no warnings have fired, add a general monitoring note.
+  const totalWeighted = questions.reduce(
+    (sum, q) => sum + getRawScore(answers[q.id], q.scoring) * q.weight,
+    0
+  );
+  const pct = Math.round((totalWeighted / maxWeightedScore) * 100);
+  if (pct >= 70 && insights.filter((i) => i.type === "warning").length === 0) {
+    // Volume-aware monitoring prompt
+    if (answers[3] >= 3) {
+      insights.push({
+        questionId: 3,
+        insight:
+          "At this volume, monitor for category drift and edge case accumulation. What works at launch can degrade over 3\u20136 months as the environment changes.",
+        type: "warning",
+      });
+    } else {
+      insights.push({
+        questionId: 3,
+        insight:
+          "Even strong candidates need monitoring. Set a review cadence \u2014 check accuracy monthly for the first quarter, then adjust.",
+        type: "warning",
+      });
+    }
+  }
 
   return insights;
 }
@@ -483,12 +650,12 @@ export default function AssessmentPage() {
     ? questions.reduce((sum, q) => sum + getWeightedScore(answers[q.id], q), 0)
     : 0;
   const percentage = Math.round((totalWeightedScore / maxWeightedScore) * 100);
-  const tierResult = getTierResult(percentage);
   const insights = allAnswered ? getQuestionInsights(answers) : [];
   const warnings = insights.filter((i) => i.type === "warning");
   const strengths = insights.filter((i) => i.type === "strength");
+  const tierResult = getTierResult(percentage, answers, insights);
   const nextSteps = allAnswered
-    ? getTierNextSteps(percentage, warnings.length > 0)
+    ? getTierNextSteps(tierResult.tier, answers, insights)
     : [];
 
   const shareUrl =
@@ -516,7 +683,7 @@ export default function AssessmentPage() {
             />
           </a>
           <span className="text-xs text-ink-muted">
-            From the Agent Design Framework
+            From the Agent Discovery and Design Framework
           </span>
         </div>
       </header>
@@ -527,9 +694,9 @@ export default function AssessmentPage() {
           Should This Be an Agent?
         </h1>
         <p className="mt-4 text-lg text-ink-light leading-relaxed max-w-2xl">
-          Not every process needs an AI agent. Some are better served by
-          automation, workflow tools, or staying with humans. This assessment
-          helps you figure out which one yours is.
+          Most processes aren&apos;t one thing. Some parts suit an agent, some
+          suit code, some need a person. This assessment helps you see which is
+          which.
         </p>
         <div className="mt-6 flex items-center gap-6 text-sm text-ink-muted">
           <span className="flex items-center gap-1.5">
@@ -1020,7 +1187,7 @@ export default function AssessmentPage() {
                 This assessment is Question 1 of
               </p>
               <p className="text-lg font-semibold text-ink mb-3">
-                The Five Questions of Agent Design
+                The Five Questions of Agent Discovery and Design
               </p>
               <p className="text-sm text-ink-light max-w-md mx-auto mb-5">
                 A practical framework for designing AI agents that work in
@@ -1032,7 +1199,7 @@ export default function AssessmentPage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-ink text-white rounded-lg text-sm font-medium hover:bg-ink-light transition-colors"
               >
-                Learn more about Agent Design
+                Learn more about Agent Discovery and Design
                 <svg
                   className="w-4 h-4"
                   fill="none"

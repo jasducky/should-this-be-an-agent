@@ -39,7 +39,7 @@ export function generateResultsPdf(data: PdfData): void {
   doc.setFontSize(9);
   doc.setTextColor(...inkMuted);
   doc.text("SERPIN", margin, 12);
-  doc.text("From the Agent Design Framework", pageWidth - margin, 12, {
+  doc.text("From the Agent Discovery and Design Framework", pageWidth - margin, 12, {
     align: "right",
   });
 
@@ -179,7 +179,7 @@ export function generateResultsPdf(data: PdfData): void {
   doc.setFontSize(8);
   doc.setTextColor(...inkMuted);
   doc.text(
-    "This assessment is Question 1 of The Five Questions of Agent Design",
+    "This assessment is Question 1 of The Five Questions of Agent Discovery and Design",
     margin,
     y
   );

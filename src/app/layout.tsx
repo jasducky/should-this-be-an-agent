@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Should This Be an Agent?",
     description:
-      "Score your use case in 2 minutes. Free assessment from the Agent Design Framework.",
+      "Score your use case in 2 minutes. Free assessment from the Agent Discovery and Design Framework.",
     type: "website",
   },
 };

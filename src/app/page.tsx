@@ -1100,6 +1100,7 @@ export default function AssessmentPage() {
               </p>
 
               {!emailSubmitted ? (
+                <>
                 <form
                   onSubmit={handleEmailSubmit}
                   className="flex flex-col sm:flex-row gap-3"
@@ -1119,6 +1120,10 @@ export default function AssessmentPage() {
                     Download results &amp; sign up
                   </button>
                 </form>
+                <p className="mt-3 text-xs text-ink-muted/70">
+                  We&apos;ll email you when the next question unlocks &mdash; that&apos;s it. No spam, no selling your data. Unsubscribe any time.
+                </p>
+                </>
               ) : (
                 <div className="flex items-center gap-2 p-3 bg-tier1-bg rounded-lg">
                   <svg

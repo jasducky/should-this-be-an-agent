@@ -21,9 +21,9 @@ const questions: Question[] = [
   // ─── Block 1: Is the task right for AI? ─────────────────────────
   {
     id: 1,
-    question: "How much does someone need to think through each case?",
+    question: "How much thinking does this process involve?",
     shortLabel: "Task complexity",
-    why: "Some processes follow clear rules every time. Others need someone to read the situation and make a call. AI agents are most useful in the middle \u2014 where the work isn\u2019t routine enough to automate with rules, but it\u2019s structured enough that the right answer can be learned.",
+    why: "Some processes follow clear rules every time. Others need someone to read the situation and make a call. AI agents are most useful in the middle \u2014 where the work isn\u2019t routine enough to automate with rules, but it\u2019s predictable enough that a system can learn to handle it.",
     thinkAbout:
       "Could you write a step-by-step checklist that covers every scenario? If yes, you probably don\u2019t need AI. If every case is different, that\u2019s where an agent might help.",
     options: [

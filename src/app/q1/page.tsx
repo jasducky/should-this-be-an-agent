@@ -1241,7 +1241,7 @@ export default function AssessmentPage() {
               onClick={handleReset}
               className="text-sm text-ink-muted hover:text-ink transition-colors cursor-pointer"
             >
-              \u2190 Take the assessment again
+              &larr; Take the assessment again
             </button>
             {isSharedView && (
               <span className="text-xs text-ink-muted">

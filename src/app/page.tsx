@@ -6,7 +6,7 @@ const questions = [
     number: 1,
     title: "Should this be an agent?",
     description:
-      "Not every process needs AI. Score your use case across 8 dimensions to find out whether an agent is the right tool, or whether automation, workflow tools, or humans are a better fit.",
+      "Not every process needs AI. Score your use case across 9 dimensions to find out whether an agent is the right tool, or whether automation, workflow tools, or humans are a better fit.",
     ref: "From \u00a77 AI Fit",
     status: "live" as const,
     href: "/q1",
@@ -175,7 +175,7 @@ export default function LandingPage() {
               {
                 n: "1",
                 title: "Take the assessment",
-                desc: "Answer 8 focused questions about your use case. Takes 2 minutes.",
+                desc: "Answer 9 focused questions about your use case. Takes 2 minutes.",
               },
               {
                 n: "2",

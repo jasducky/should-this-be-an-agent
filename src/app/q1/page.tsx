@@ -18,6 +18,7 @@ interface Question {
 }
 
 const questions: Question[] = [
+  // ─── Block 1: Is the task right for AI? ─────────────────────────
   {
     id: 1,
     question: "How much human interpretation does this process need?",
@@ -52,42 +53,9 @@ const questions: Question[] = [
     weight: 1.0,
     scoring: "linear",
   },
+  // ─── Block 2: Can you build it? ─────────────────────────────────
   {
     id: 3,
-    question: "What\u2019s the volume?",
-    shortLabel: "Volume",
-    why: "This is unit economics for AI. Every agent interaction has a per-use cost (inference, retrieval, retries, moderation), and the true cost per task is typically 10\u201350\u00d7 the posted API price. Low volume rarely pays back.",
-    thinkAbout:
-      "What would each interaction cost? Multiply by volume, then compare to the current human cost for the same work.",
-    options: [
-      "A few per week",
-      "A few per day",
-      "Dozens per day",
-      "Hundreds per day",
-      "Thousands or more per day",
-    ],
-    weight: 0.75,
-    scoring: "linear",
-  },
-  {
-    id: 4,
-    question: "What happens when it gets it wrong?",
-    shortLabel: "Consequence of errors",
-    why: "This is where you run a pre-mortem: \u2018Imagine this agent has been live for three months and something has gone wrong. What happened?\u2019 Understanding the consequences upfront helps you design the right level of guardrails and human oversight.",
-    thinkAbout:
-      "Run a quick pre-mortem: what\u2019s the most likely thing to go wrong? Who would notice, and how quickly?",
-    options: [
-      "Minor inconvenience, easily fixed",
-      "Some wasted time or rework",
-      "Customer-facing impact",
-      "Significant financial or reputational impact",
-      "Regulatory, legal, or safety consequences",
-    ],
-    weight: 1.5,
-    scoring: "inverted",
-  },
-  {
-    id: 5,
     question: "How much of the process is already documented?",
     shortLabel: "Process documentation",
     why: "PMs call this the bus factor. If your expert left tomorrow, could someone else do their job from the docs? Undocumented processes are full of tribal knowledge that\u2019s hard to automate and harder to test.",
@@ -104,24 +72,24 @@ const questions: Question[] = [
     scoring: "linear",
   },
   {
-    id: 6,
-    question: "Does the business case hold up at current AI costs?",
-    shortLabel: "Business case",
-    why: "This is your viability gate, not a full business case but a sanity check. If you haven\u2019t modelled cost-to-serve against the value created, you\u2019re investing based on excitement rather than evidence.",
+    id: 4,
+    question: "Do you have access to the data the agent would need?",
+    shortLabel: "Data readiness",
+    why: "Data readiness is the most common technical reason AI projects stall. If the data your agent needs is scattered across systems, incomplete, or locked behind access barriers, that\u2019s a problem to solve before the build starts, not during it.",
     thinkAbout:
-      "Can you estimate: cost per AI interaction \u00d7 expected volume vs. current human cost for the same work?",
+      "Where does the data live? Can you access it? Is it in a state you could work with, or would it need significant cleaning or restructuring first?",
     options: [
-      "Haven\u2019t thought about it",
-      "Rough idea, not confident",
-      "Estimated, looks reasonable",
-      "Modelled with assumptions",
-      "Detailed analysis, clear ROI",
+      "We don\u2019t know what data it would need",
+      "The data exists but it\u2019s scattered across systems",
+      "The data exists and is mostly accessible",
+      "The data is accessible and reasonably clean",
+      "The data is accessible, clean, and we understand its structure",
     ],
     weight: 1.0,
     scoring: "linear",
   },
   {
-    id: 7,
+    id: 5,
     question:
       "Is there a human who currently does this and can validate the agent\u2019s work?",
     shortLabel: "Human validator",
@@ -138,8 +106,61 @@ const questions: Question[] = [
     weight: 1.25,
     scoring: "linear",
   },
+  // ─── Block 3: Does the investment make sense? ───────────────────
+  {
+    id: 6,
+    question: "What\u2019s the volume?",
+    shortLabel: "Volume",
+    why: "This is unit economics for AI. Every agent interaction has a per-use cost (inference, retrieval, retries, moderation), and the true cost per task is typically 10\u201350\u00d7 the posted API price. Low volume rarely pays back.",
+    thinkAbout:
+      "What would each interaction cost? Multiply by volume, then compare to the current human cost for the same work.",
+    options: [
+      "A few per week",
+      "A few per day",
+      "Dozens per day",
+      "Hundreds per day",
+      "Thousands or more per day",
+    ],
+    weight: 0.75,
+    scoring: "linear",
+  },
+  {
+    id: 7,
+    question: "Does the business case hold up at current AI costs?",
+    shortLabel: "Business case",
+    why: "This is your viability gate, not a full business case but a sanity check. If you haven\u2019t modelled cost-to-serve against the value created, you\u2019re investing based on excitement rather than evidence.",
+    thinkAbout:
+      "Can you estimate: cost per AI interaction \u00d7 expected volume vs. current human cost for the same work?",
+    options: [
+      "Haven\u2019t thought about it",
+      "Rough idea, not confident",
+      "Estimated, looks reasonable",
+      "Modelled with assumptions",
+      "Detailed analysis, clear ROI",
+    ],
+    weight: 1.0,
+    scoring: "linear",
+  },
   {
     id: 8,
+    question: "What happens when it gets it wrong?",
+    shortLabel: "Consequence of errors",
+    why: "This is where you run a pre-mortem: \u2018Imagine this agent has been live for three months and something has gone wrong. What happened?\u2019 Understanding the consequences upfront helps you design the right level of guardrails and human oversight.",
+    thinkAbout:
+      "Run a quick pre-mortem: what\u2019s the most likely thing to go wrong? Who would notice, and how quickly?",
+    options: [
+      "Minor inconvenience, easily fixed",
+      "Some wasted time or rework",
+      "Customer-facing impact",
+      "Significant financial or reputational impact",
+      "Regulatory, legal, or safety consequences",
+    ],
+    weight: 1.5,
+    scoring: "inverted",
+  },
+  // ─── Block 4: Is the organisation ready? ────────────────────────
+  {
+    id: 9,
     question:
       "Does leadership understand this won\u2019t be right 100% of the time?",
     shortLabel: "Leadership readiness",
@@ -215,20 +236,23 @@ function getTierNextSteps(tier: number, answers: Record<number, number>, warning
 
   if (tier === 2) {
     // Warning-specific actionable steps
-    if (warningQuestions.has(5)) {
+    if (warningQuestions.has(3)) {
       steps.push("Document the process first: shadow the person who does this for a full cycle and write down every decision they make, including the edge cases");
     }
-    if (warningQuestions.has(6)) {
-      steps.push("Build a simple business case: (cost per AI interaction \u00d7 expected volume) vs. the current human cost for the same work");
+    if (warningQuestions.has(4)) {
+      steps.push("Audit your data: map what the agent would need, where it lives, and what state it\u2019s in. Data gaps are the most common technical blocker.");
     }
     if (warningQuestions.has(7)) {
+      steps.push("Build a simple business case: (cost per AI interaction \u00d7 expected volume) vs. the current human cost for the same work");
+    }
+    if (warningQuestions.has(5)) {
       steps.push("Identify a validator: find someone who can check the agent\u2019s work during a pilot, even if it\u2019s just spot-checking 10% of outputs");
     }
     if (warningQuestions.has(8)) {
-      steps.push("Have the \u2018good enough\u2019 conversation with leadership: agree on what error rate would be acceptable before investing in a build");
-    }
-    if (warningQuestions.has(4)) {
       steps.push("Map your risk: run a pre-mortem with your team and define kill criteria \u2014 what would make you shut the agent down?");
+    }
+    if (warningQuestions.has(9)) {
+      steps.push("Have the \u2018good enough\u2019 conversation with leadership: agree on what error rate would be acceptable before investing in a build");
     }
     if (!hasWarnings) {
       steps.push("Your scores show potential across the board. Share this with your team as a starting point for the conversation");
@@ -243,10 +267,10 @@ function getTierNextSteps(tier: number, answers: Record<number, number>, warning
   } else {
     steps.push("Consider workflow automation for the structured parts of this process, and keep the judgement-heavy parts with humans for now");
   }
-  if (warningQuestions.has(5)) {
+  if (warningQuestions.has(3)) {
     steps.push("Before automating anything: document the process. Shadow the person who does this and capture every decision, especially the edge cases");
   }
-  if ((answers[4] ?? 0) >= 4) {
+  if ((answers[8] ?? 0) >= 4) {
     steps.push("For high-consequence processes, involve your compliance or legal team before evaluating any automation \u2014 they\u2019ll have requirements you need to design for");
   }
   if (hasWarnings) {
@@ -277,7 +301,7 @@ function getTierResult(percentage: number, answers: Record<number, number>, warn
   // ─── Override 2: Danger combination ───────────────────────────
   // When multiple severe warnings combine with high consequences,
   // force Tier 3 regardless of score.
-  const highConsequences = (answers[4] ?? 0) >= 4;
+  const highConsequences = (answers[8] ?? 0) >= 4;
   if (warningCount >= 4 && highConsequences && percentage >= 45) {
     return {
       tier: 3,
@@ -359,6 +383,7 @@ function getQuestionInsights(
     type: "warning" | "strength";
   }[] = [];
 
+  // Q1 — Interpretation needed
   if (answers[1] <= 2)
     insights.push({
       questionId: 1,
@@ -383,7 +408,7 @@ function getQuestionInsights(
       type: "strength",
     });
 
-  // Q2 — Input variability (also covers data quality gap)
+  // Q2 — Input variability
   if (answers[2] >= 4)
     insights.push({
       questionId: 2,
@@ -399,34 +424,64 @@ function getQuestionInsights(
       type: "strength",
     });
 
-  // Q4 — Consequences
-  if (answers[4] >= 4)
+  // Q3 — Process documentation
+  if (answers[3] <= 2)
     insights.push({
-      questionId: 4,
+      questionId: 3,
       insight:
-        answers[4] >= 5
-          ? "Regulatory or legal consequences mean any automation needs explainable reasoning, audit trails, and sign-off from your compliance and legal teams before you proceed."
-          : "High consequences mean you\u2019ll need solid guardrails, monitoring, and mandatory human review for edge cases. Define your kill criteria before you build.",
+        answers[3] === 1
+          ? "This process lives entirely in people\u2019s heads. That\u2019s your first job: capture the knowledge before you can automate any of it."
+          : "Partially documented with tribal knowledge gaps. Map out the undocumented decisions \u2014 those are where the agent will fail first.",
       type: "warning",
     });
-  if (answers[4] <= 2)
+  if (answers[3] >= 4)
     insights.push({
-      questionId: 4,
+      questionId: 3,
       insight:
-        answers[4] === 1
-          ? "Minor-inconvenience failures give you a safe environment to experiment. Use that \u2014 launch a pilot, learn fast, iterate."
-          : "Errors here mean some rework, not real damage. That gives you room to iterate and improve the agent over time.",
+        answers[3] === 5
+          ? "Fully mapped processes are the easiest to automate and the easiest to test. Your documentation is a genuine head start."
+          : "Well-documented processes give you a strong foundation for building test cases and defining what \u2018right\u2019 looks like.",
       type: "strength",
     });
 
-  // Q5 — Documentation
+  // Q4 — Data readiness
+  if (answers[4] === 1)
+    insights.push({
+      questionId: 4,
+      insight:
+        "You haven\u2019t identified what data the agent would need yet. Start there \u2014 until you know what data is required, you can\u2019t assess whether it\u2019s feasible to build.",
+      type: "warning",
+    });
+  else if (answers[4] === 2)
+    insights.push({
+      questionId: 4,
+      insight:
+        "Data scattered across systems is the most common technical blocker for AI projects. Map what\u2019s needed, where it lives, and what it would take to bring it together before committing to a build.",
+      type: "warning",
+    });
+  if (answers[4] === 5)
+    insights.push({
+      questionId: 4,
+      insight:
+        "Clean, accessible, well-understood data is a genuine advantage. It means you can move faster into prototyping and spend less time on data engineering.",
+      type: "strength",
+    });
+  else if (answers[4] === 4)
+    insights.push({
+      questionId: 4,
+      insight:
+        "Accessible, reasonably clean data gives you a solid starting point. Budget some time for data prep, but it shouldn\u2019t be a blocker.",
+      type: "strength",
+    });
+
+  // Q5 — Human validator
   if (answers[5] <= 2)
     insights.push({
       questionId: 5,
       insight:
         answers[5] === 1
-          ? "This process lives entirely in people\u2019s heads. That\u2019s your first job: capture the knowledge before you can automate any of it."
-          : "Partially documented with tribal knowledge gaps. Map out the undocumented decisions \u2014 those are where the agent will fail first.",
+          ? "No one does this today, which means no one can tell you if the agent got it right. You need ground truth before you can build."
+          : "Your previous validator has moved on. Find someone who understands what \u2018correct\u2019 looks like \u2014 without that, you\u2019re flying blind.",
       type: "warning",
     });
   if (answers[5] >= 4)
@@ -434,57 +489,60 @@ function getQuestionInsights(
       questionId: 5,
       insight:
         answers[5] === 5
-          ? "Fully mapped processes are the easiest to automate and the easiest to test. Your documentation is a genuine head start."
-          : "Well-documented processes give you a strong foundation for building test cases and defining what \u2018right\u2019 looks like.",
-      type: "strength",
-    });
-
-  // Q6 — Business case
-  if (answers[6] <= 2)
-    insights.push({
-      questionId: 6,
-      insight:
-        answers[6] === 1
-          ? "No cost modelling yet. Before building anything, estimate: (cost per AI interaction \u00d7 volume) vs. what you\u2019re spending now."
-          : "A rough business case isn\u2019t enough to invest on. Sharpen it: what specifically does the agent save, and what does it cost to run?",
-      type: "warning",
-    });
-
-  // Q7 — Human validator
-  if (answers[7] <= 2)
-    insights.push({
-      questionId: 7,
-      insight:
-        answers[7] === 1
-          ? "No one does this today, which means no one can tell you if the agent got it right. You need ground truth before you can build."
-          : "Your previous validator has moved on. Find someone who understands what \u2018correct\u2019 looks like \u2014 without that, you\u2019re flying blind.",
-      type: "warning",
-    });
-  if (answers[7] >= 4)
-    insights.push({
-      questionId: 7,
-      insight:
-        answers[7] === 5
           ? "A willing, ready validator is rare and valuable. They\u2019ll be your quality backstop during the pilot \u2014 invest in keeping them engaged."
           : "Someone who can spot-check regularly gives you a feedback loop. Use it: structured reviews, not just ad-hoc checks.",
       type: "strength",
     });
 
-  // Q8 — Leadership readiness
+  // Q6 — Volume
+  // (No per-question insights — volume feeds the monitoring nudge below)
+
+  // Q7 — Business case
+  if (answers[7] <= 2)
+    insights.push({
+      questionId: 7,
+      insight:
+        answers[7] === 1
+          ? "No cost modelling yet. Before building anything, estimate: (cost per AI interaction \u00d7 volume) vs. what you\u2019re spending now."
+          : "A rough business case isn\u2019t enough to invest on. Sharpen it: what specifically does the agent save, and what does it cost to run?",
+      type: "warning",
+    });
+
+  // Q8 — Consequence of errors
+  if (answers[8] >= 4)
+    insights.push({
+      questionId: 8,
+      insight:
+        answers[8] >= 5
+          ? "Regulatory or legal consequences mean any automation needs explainable reasoning, audit trails, and sign-off from your compliance and legal teams before you proceed."
+          : "High consequences mean you\u2019ll need solid guardrails, monitoring, and mandatory human review for edge cases. Define your kill criteria before you build.",
+      type: "warning",
+    });
   if (answers[8] <= 2)
     insights.push({
       questionId: 8,
       insight:
         answers[8] === 1
+          ? "Minor-inconvenience failures give you a safe environment to experiment. Use that \u2014 launch a pilot, learn fast, iterate."
+          : "Errors here mean some rework, not real damage. That gives you room to iterate and improve the agent over time.",
+      type: "strength",
+    });
+
+  // Q9 — Leadership readiness
+  if (answers[9] <= 2)
+    insights.push({
+      questionId: 9,
+      insight:
+        answers[9] === 1
           ? "Leadership expects perfection. That\u2019s a project-stopper for AI. Have the \u2018what error rate would we accept?\u2019 conversation before investing."
           : "Leadership says they understand AI isn\u2019t perfect, but that hasn\u2019t been tested. Align on specific tolerances before the first demo.",
       type: "warning",
     });
-  if (answers[8] >= 4)
+  if (answers[9] >= 4)
     insights.push({
-      questionId: 8,
+      questionId: 9,
       insight:
-        answers[8] === 5
+        answers[9] === 5
           ? "Agreed tolerances are the strongest foundation you can have. Most teams never get here \u2014 you\u2019re ahead of the curve."
           : "You\u2019ve discussed acceptable error rates, which puts you ahead of most teams. Formalise those numbers before the pilot starts.",
       type: "strength",
@@ -500,16 +558,16 @@ function getQuestionInsights(
   const pct = Math.round((totalWeighted / maxWeightedScore) * 100);
   if (pct >= 70 && insights.filter((i) => i.type === "warning").length === 0) {
     // Volume-aware monitoring prompt
-    if (answers[3] >= 3) {
+    if (answers[6] >= 3) {
       insights.push({
-        questionId: 3,
+        questionId: 6,
         insight:
           "At this volume, monitor for category drift and edge case accumulation. What works at launch can degrade over 3\u20136 months as the environment changes.",
         type: "warning",
       });
     } else {
       insights.push({
-        questionId: 3,
+        questionId: 6,
         insight:
           "Even strong candidates need monitoring. Set a review cadence \u2014 check accuracy monthly for the first quarter, then adjust.",
         type: "warning",
@@ -729,7 +787,7 @@ export default function AssessmentPage() {
                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
               />
             </svg>
-            8 questions
+            9 questions
           </span>
           <span className="flex items-center gap-1.5">
             <svg

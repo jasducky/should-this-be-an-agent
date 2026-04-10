@@ -12,13 +12,17 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await fetch(webhookUrl, {
+    const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    if (!response.ok) {
+      console.error(`[5Q submit] Encharge webhook failed: ${response.status} ${response.statusText}`);
+    }
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    console.error("[5Q submit] Encharge webhook error:", err);
     return NextResponse.json(
       { error: "Failed to submit" },
       { status: 500 }

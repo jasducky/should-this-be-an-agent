@@ -262,15 +262,24 @@ function getTierNextSteps(tier: number, answers: Record<number, number>, warning
   }
 
   // Tier 3
+  const highConsequence = (answers[8] ?? 0) >= 4;
   if ((answers[1] ?? 0) <= 2) {
-    steps.push("This process is rules-based enough for workflow automation (tools like Zapier, Make, n8n) or RPA \u2014 explore those first");
+    if (highConsequence) {
+      steps.push("This process is rules-based, which suits structured automation \u2014 but given the consequences of errors, any solution needs audit trails, compliance review, and human sign-off built in from the start");
+    } else {
+      steps.push("This process is rules-based enough for workflow automation (tools like Zapier, Make, n8n) or RPA \u2014 explore those first");
+    }
   } else {
-    steps.push("Consider workflow automation for the structured parts of this process, and keep the judgement-heavy parts with humans for now");
+    if (highConsequence) {
+      steps.push("Keep humans in the loop for now. The combination of judgement-heavy work and high consequences means automation needs careful scoping \u2014 start by identifying which specific sub-tasks have lower risk");
+    } else {
+      steps.push("Consider workflow automation for the structured parts of this process, and keep the judgement-heavy parts with humans for now");
+    }
   }
   if (warningQuestions.has(3)) {
     steps.push("Before automating anything: document the process. Shadow the person who does this and capture every decision, especially the edge cases");
   }
-  if ((answers[8] ?? 0) >= 4) {
+  if (highConsequence) {
     steps.push("For high-consequence processes, involve your compliance or legal team before evaluating any automation \u2014 they\u2019ll have requirements you need to design for");
   }
   if (hasWarnings) {
@@ -439,8 +448,8 @@ function getQuestionInsights(
       questionId: 3,
       insight:
         answers[3] === 5
-          ? "Fully mapped processes are the easiest to automate and the easiest to test. Your documentation is a genuine head start."
-          : "Well-documented processes give you a strong foundation for building test cases and defining what \u2018right\u2019 looks like.",
+          ? "Fully mapped processes are the easiest to automate and the easiest to test. Use your decision trees to build eval cases before writing any agent code."
+          : "Well-documented processes give you a strong foundation. Focus on capturing the edge cases that aren\u2019t written down yet \u2014 those are where the agent will need the most guidance.",
       type: "strength",
     });
 
@@ -463,14 +472,14 @@ function getQuestionInsights(
     insights.push({
       questionId: 4,
       insight:
-        "Clean, accessible, well-understood data is a genuine advantage. It means you can move faster into prototyping and spend less time on data engineering.",
+        "Clean, accessible, well-understood data is a genuine advantage. Use it to build your evaluation set early \u2014 you\u2019ll need it to measure whether the agent is actually working.",
       type: "strength",
     });
   else if (answers[4] === 4)
     insights.push({
       questionId: 4,
       insight:
-        "Accessible, reasonably clean data gives you a solid starting point. Budget some time for data prep, but it shouldn\u2019t be a blocker.",
+        "Accessible, reasonably clean data gives you a solid starting point. Prioritise organising it into test cases before you start building \u2014 that investment pays back quickly.",
       type: "strength",
     });
 
@@ -523,8 +532,8 @@ function getQuestionInsights(
       questionId: 8,
       insight:
         answers[8] === 1
-          ? "Minor-inconvenience failures give you a safe environment to experiment. Use that \u2014 launch a pilot, learn fast, iterate."
-          : "Errors here mean some rework, not real damage. That gives you room to iterate and improve the agent over time.",
+          ? "Errors here are easy to catch and fix, which gives you a safe space to experiment. Use that \u2014 launch a small pilot, learn what the agent gets wrong, and improve it before scaling up."
+          : "Errors here mean some rework, not real damage. That\u2019s a genuine advantage \u2014 it means you can iterate on the agent\u2019s quality without high-stakes pressure.",
       type: "strength",
     });
 
@@ -639,9 +648,18 @@ export default function AssessmentPage() {
         setAnswers(decoded);
         setShowResults(true);
         setIsSharedView(true);
-        setTimeout(() => {
-          resultsRef.current?.scrollIntoView({ behavior: "smooth" });
-        }, 100);
+        // Wait for React to render results, then scroll — needs longer delay on mobile
+        const scrollToResults = () => {
+          requestAnimationFrame(() => {
+            if (resultsRef.current) {
+              resultsRef.current.scrollIntoView({ behavior: "smooth" });
+            } else {
+              // Results not rendered yet, retry
+              setTimeout(scrollToResults, 50);
+            }
+          });
+        };
+        setTimeout(scrollToResults, 150);
       }
     }
   }, []);
@@ -754,7 +772,7 @@ export default function AssessmentPage() {
             href="https://serpin.ai"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex-shrink-0 flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <Image
               src="/serpin-logo-black.png"
@@ -764,7 +782,7 @@ export default function AssessmentPage() {
               className="h-5 w-auto"
             />
           </a>
-          <span className="text-xs text-ink-muted">
+          <span className="text-xs text-ink-muted text-right">
             From the Agent Discovery and Design Framework
           </span>
         </div>
@@ -1054,7 +1072,21 @@ export default function AssessmentPage() {
                 );
               })}
             </div>
-            <p className="text-xs text-ink-muted mt-4">
+            <div className="flex items-center gap-4 mt-4 mb-1">
+              <span className="flex items-center gap-1.5 text-xs text-ink-muted">
+                <span className="w-3 h-3 rounded-full bg-tier1 inline-block" />
+                Strong (4-5)
+              </span>
+              <span className="flex items-center gap-1.5 text-xs text-ink-muted">
+                <span className="w-3 h-3 rounded-full bg-serpin-yellow-hover inline-block" />
+                Moderate (3)
+              </span>
+              <span className="flex items-center gap-1.5 text-xs text-ink-muted">
+                <span className="w-3 h-3 rounded-full bg-tier3/70 inline-block" />
+                Needs work (1-2)
+              </span>
+            </div>
+            <p className="text-xs text-ink-muted">
               Not all questions are weighted equally. Interpretation level,
               consequences, human validation, and leadership readiness carry
               more weight in the final score.
